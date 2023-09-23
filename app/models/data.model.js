@@ -1,0 +1,51 @@
+const mongoose = require('mongoose');
+
+const modeldataSchema = new mongoose.Schema({
+  Category: String,
+  Sub_Category: String,
+  Size: String,
+  Reimbursable: Number,
+  Fuel_type: Number,
+  Fuel_unit_price: Number,
+  Original_price: Number,
+  Sales_Tax: Number,
+  Discount: Number,
+  Salvage_Value: Number,
+  Current_Market_Year_Resale_Value: Number,
+  Annual_Overhaul_Labor_Hours: Number,
+  Annual_Field_Labor_Hours: Number,
+  Cost_of_A_New_Set_of_Tires: Number,
+  Tire_Life_Hours: Number,
+  Hourly_Lube_Costs: Number,
+  Hourly_Wage: Number,
+  Adjustment_for_fuel_cost: Number,
+  Horse_power: Number,
+  Economic_Life_in_months: Number,
+  Monthly_use_hours: Number,
+  Usage_rate: Number,
+  Initial_Freight_cost: Number,
+  Annual_Overhead_rate: Number,
+  Annual_Overhaul_Parts_cost_rate: Number,
+  Annual_Field_Repair_Parts_and_misc_supply_parts_Cost_rate: Number,
+  Annual_Ground_Engaging_Component_rate: Number,
+  Cost_of_Capital_rate: Number,
+  Depreciation_Ownership_cost_Monthly: Number,
+  Cost_of_Facilities_Capital_Ownership_cost_Monthly: Number,
+  Overhead_Ownership_cost_Monthly: Number,
+  Overhaul_Labor_Ownership_cost_Monthly: Number,
+  Overhaul_Parts_Ownership_cost_Monthly: Number,
+  Total_ownership_cost_hourly: Number,
+  Field_Labor_Operating_cost_Hourly: Number,
+  Field_Parts_Operating_cost_Hourly: Number,
+  Ground_Engaging_Component_Cost_Operating_cost_Hourly: Number,
+  Lube_Operating_cost_Hourly: Number,
+  Fuel_by_horse_power_Operating_cost_Hourly: Number,
+  Tire_Costs_Operating_cost_Hourly: Number,
+  Total_operating_cost: Number,
+  Total_cost_recovery: Number,
+});
+
+// Step 2.2: Create the Mongoose model
+const Modeldata = mongoose.model('Modeldata', modeldataSchema);
+
+module.exports = Modeldata;
