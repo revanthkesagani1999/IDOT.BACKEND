@@ -39,5 +39,7 @@ module.exports = function(app) {
   app.post('/api/test/generate-data', [authJwt.verifyToken, authJwt.isAdmin], dataController.generateNextYearEquipData);
   app.put('/api/test/editfuelcosts', [authJwt.verifyToken, authJwt.isAdmin], dataController.editFuelCosts);
   app.get('/api/test/fuelcosts', [authJwt.verifyToken, authJwt.isAdmin], dataController.getFuelCosts);
+  app.get('/api/test/hrlabourwage', [authJwt.verifyToken, authJwt.isAdmin], dataController.getLabourWage);
+  app.put('/api/test/edithrlabourwage', [authJwt.verifyToken, authJwt.isAdmin], dataController.updateHourlyWage);
 
 };
