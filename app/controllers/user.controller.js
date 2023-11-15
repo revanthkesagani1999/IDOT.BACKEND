@@ -16,7 +16,7 @@ exports.moderatorBoard = (req, res) => {
 };
 const User = db.user;
 exports.saveModel = (req, res) => {
-  const { category, modelYear, size, subcategory, fueltype } = req.body;
+  const { category, modelYear, size, subcategory, fueltype, equipment } = req.body;
   const userId = req.userId;
 
   User.findById(userId, (err, user) => {
@@ -31,7 +31,7 @@ exports.saveModel = (req, res) => {
     }
 
     // Add the model information to the user's savedModels array
-    const modelData = JSON.stringify({ category, modelYear, size, subcategory, fueltype });
+    const modelData = JSON.stringify({ category, modelYear, size, subcategory, fueltype, equipment });
     user.savedModels.push(modelData);
 
     // Save the updated user document

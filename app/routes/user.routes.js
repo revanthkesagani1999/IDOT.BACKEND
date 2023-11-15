@@ -41,5 +41,5 @@ module.exports = function(app) {
   app.get('/api/test/fuelcosts', [authJwt.verifyToken, authJwt.isAdmin], dataController.getFuelCosts);
   app.get('/api/test/hrlabourwage', [authJwt.verifyToken, authJwt.isAdmin], dataController.getLabourWage);
   app.put('/api/test/edithrlabourwage', [authJwt.verifyToken, authJwt.isAdmin], dataController.updateHourlyWage);
-
+  app.get('/api/test/currentyear', [authJwt.verifyToken, authJwt.isAdmin], dataController.getCurrentYear);
 };
