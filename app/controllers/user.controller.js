@@ -1,4 +1,6 @@
 const db = require("../models");
+const User = db.user;
+
 exports.allAccess = (req, res) => {
   res.status(200).send("Public Content.");
 };
@@ -14,20 +16,15 @@ exports.adminBoard = (req, res) => {
 exports.moderatorBoard = (req, res) => {
   res.status(200).send("Moderator Content.");
 };
-const User = db.user;
-exports.saveModel = (req, res) => {
+
+exports.saveModel = async (req, res) => {
   const { category, modelYear, size, subcategory, fueltype, equipment } = req.body;
   const userId = req.userId;
 
-  User.findById(userId, (err, user) => {
-    if (err) {
-      res.status(500).send({ message: err });
-      return;
-    }
-
+  try {
+    const user = await User.findById(userId).exec();
     if (!user) {
-      res.status(404).send({ message: "User not found." });
-      return;
+      return res.status(404).send({ message: "User not found." });
     }
 
     // Add the model information to the user's savedModels array
@@ -35,32 +32,26 @@ exports.saveModel = (req, res) => {
     user.savedModels.push(modelData);
 
     // Save the updated user document
-    user.save((err) => {
-      if (err) {
-        res.status(500).send({ message: err });
-        return;
-      }
-
-      res.status(200).send({ message: "Model saved successfully." });
-    });
-  });
+    await user.save();
+    res.status(200).send({ message: "Model saved successfully." });
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
 };
 
-exports.getAllModels = (req, res) => {
+
+exports.getAllModels = async (req, res) => {
   const userId = req.userId;
 
-  User.findById(userId, (err, user) => {
-    if (err) {
-      res.status(500).send({ message: err });
-      return;
-    }
-
+  try {
+    const user = await User.findById(userId).exec();
     if (!user) {
-      res.status(404).send({ message: "User not found." });
-      return;
+      return res.status(404).send({ message: "User not found." });
     }
 
     res.status(200).send({ savedModels: user.savedModels });
-  });
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
 };
 

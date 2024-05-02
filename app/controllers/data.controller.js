@@ -64,48 +64,50 @@ exports.editEquipment = async (req, res) => {
 
 exports.generateNextYearEquipData = async (req, res) => {
   try {
-
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      if (currentMonth !== 11) {
-          return res.status(400).json({ message: 'Data generation is only allowed in December.' });
-      }
-      const { priceIncreaseRate, dataUpdate } = req.body;
       const currentYearData = await mongoose.connection.db.collection('currentyear').findOne({});
       const currentYear = currentYearData ? currentYearData.currentyear : (new Date().getFullYear()).toString();
-      const currentYearCollection = mongoose.connection.db.collection(currentYear.toString());
-      const currentYearEquipmentData = await currentYearCollection.find({}).toArray();
-      const nextYear = (parseInt(currentYear) + 1).toString();
-      const nextYearCollectionForCheck = mongoose.connection.db.collection(nextYear);
-      const existingData = await nextYearCollectionForCheck.find({}).toArray();
-      if (existingData.length > 0) {
-          return res.status(409).json({ message: `Equipment data for year ${nextYear} already exists` });
+      const currentDate = new Date();
+      const actualCurrentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      if (currentYear < actualCurrentYear || (currentYear === actualCurrentYear && currentMonth === 11)){
+        
+        const { priceIncreaseRate, dataUpdate } = req.body;
+        const currentYearCollection = mongoose.connection.db.collection(currentYear.toString());
+        const currentYearEquipmentData = await currentYearCollection.find({}).toArray();
+        const nextYear = (parseInt(currentYear) + 1).toString();
+        const nextYearCollectionForCheck = mongoose.connection.db.collection(nextYear);
+        const existingData = await nextYearCollectionForCheck.find({}).toArray();
+        if (existingData.length > 0) {
+            return res.status(409).json({ message: `Equipment data for year ${nextYear} already exists` });
+        }
+        const nextYearEquipmentData = currentYearEquipmentData.map(equipment => {
+            const nextYrEquipment = { ...equipment };
+            nextYrEquipment.Original_price = Math.round(equipment.Original_price * (1 + priceIncreaseRate / 100));
+            return calculateDefaultValues(nextYrEquipment, nextYear, nextYear);
+        });
+        // console.log(`Created year ${nextYear} data`);
+        // console.log(nextYearEquipmentData)
+        await mongoose.connection.db.collection(nextYear).insertMany(nextYearEquipmentData);
+        await mongoose.connection.db.collection('currentyear').updateOne({}, { $set: { currentyear: parseInt(nextYear) } });
+        const updatePromises = [];
+        if (dataUpdate) {
+          for (let year = currentYear; year >= 2003; year--) {
+            updatePromises.push(updateYearEquipmentData(nextYear, year));
+        }
+        await Promise.all(updatePromises);
+        res.status(200).json({ message: `Equipment data for year ${nextYear} generated and previous years updated successfully` });
+    
+        } else {
+          res.status(200).json({ message: `Equipment data for year ${nextYear} generated successfully` });
+        }
+        } else {
+          return res.status(400).json({ message: 'Data generation is only allowed in December.' });
+        }} catch (error) {
+        console.error('Error generating next year equipment data:', error);
+        res.status(500).json({ message: 'Error generating next year equipment data' });
       }
-      const nextYearEquipmentData = currentYearEquipmentData.map(equipment => {
-          const nextYrEquipment = { ...equipment };
-          nextYrEquipment.Original_price = Math.round(equipment.Original_price * (1 + priceIncreaseRate / 100));
-          return calculateDefaultValues(nextYrEquipment, nextYear, nextYear);
-      });
-      // console.log(`Created year ${nextYear} data`);
-      // console.log(nextYearEquipmentData)
-      await mongoose.connection.db.collection(nextYear).insertMany(nextYearEquipmentData);
-      await mongoose.connection.db.collection('currentyear').updateOne({}, { $set: { currentyear: parseInt(nextYear) } });
-      const updatePromises = [];
-      if (dataUpdate) {
-        for (let year = currentYear; year >= 2003; year--) {
-          updatePromises.push(updateYearEquipmentData(nextYear, year));
-      }
-      await Promise.all(updatePromises);
-      res.status(200).json({ message: `Equipment data for year ${nextYear} generated and previous years updated successfully` });
-  
-      } else {
-        res.status(200).json({ message: `Equipment data for year ${nextYear} generated successfully` });
-      }
-      } catch (error) {
-      console.error('Error generating next year equipment data:', error);
-      res.status(500).json({ message: 'Error generating next year equipment data' });
-  }
-};
+
+  };
 
 async function updateYearEquipmentData(year, currYear) {
   const yearCollection = mongoose.connection.db.collection(currYear.toString());

@@ -16,6 +16,8 @@ const User = mongoose.model(
       type: [String],
       default: [],
     },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
   })
 );
 

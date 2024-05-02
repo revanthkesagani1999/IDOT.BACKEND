@@ -17,17 +17,17 @@ module.exports = function(app) {
   );
 
   app.get("/api/test/savedmodels", [authJwt.verifyToken], controller.getAllModels);
-  app.get('/api/test/years',[authJwt.verifyToken, authJwt.isAdmin], dataController.getAllYears);
-  app.get('/api/test/model-data/:year',[authJwt.verifyToken, authJwt.isAdmin], dataController.getModelDataByYear);
+  app.get('/api/test/years',[authJwt.verifyToken], dataController.getAllYears);
+  app.get('/api/test/model-data/:year',[authJwt.verifyToken], dataController.getModelDataByYear);
   app.get("/api/test/all", controller.allAccess);
 
-  app.get("/api/test/user", [authJwt.verifyToken], controller.userBoard);
+  app.get("/api/test/user", [authJwt.verifyToken,authJwt.isGeneralUser], controller.userBoard);
 
-  app.get(
-    "/api/test/mod",
-    [authJwt.verifyToken, authJwt.isModerator],
-    controller.moderatorBoard
-  );
+  // app.get(
+  //   "/api/test/mod",
+  //   [authJwt.verifyToken, authJwt.isModerator],
+  //   controller.moderatorBoard
+  // );
 
   app.get(
     "/api/test/admin",
@@ -41,5 +41,5 @@ module.exports = function(app) {
   app.get('/api/test/fuelcosts', [authJwt.verifyToken, authJwt.isAdmin], dataController.getFuelCosts);
   app.get('/api/test/hrlabourwage', [authJwt.verifyToken, authJwt.isAdmin], dataController.getLabourWage);
   app.put('/api/test/edithrlabourwage', [authJwt.verifyToken, authJwt.isAdmin], dataController.updateHourlyWage);
-  app.get('/api/test/currentyear', [authJwt.verifyToken, authJwt.isAdmin], dataController.getCurrentYear);
+  app.get('/api/test/currentyear', [authJwt.verifyToken], dataController.getCurrentYear);
 };

@@ -38,8 +38,8 @@ const Role = db.role;
 
 db.mongoose
   .connect("mongodb+srv://rkesagani:Revanth1999@idotcluster.ejuamcb.mongodb.net/?retryWrites=true&w=majority", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
+    // // useNewUrlParser: true,
+    // useUnifiedTopology: true
   })
   .then(() => {
     console.log("Successfully connect to MongoDB.");
@@ -65,18 +65,13 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}.`);
 });
 
-function initial() {
-  Role.estimatedDocumentCount((err, count) => {
-    if (!err && count === 0) {
-      new Role({
-        name: "user"
-      }).save(err => {
-        if (err) {
-          console.log("error", err);
-        }
-
-        console.log("added 'user' to roles collection");
-      });
+async function initial() {
+  try {
+    const count = await Role.estimatedDocumentCount();
+    if (count === 0) {
+      // Create roles if they don't exist
+      await new Role({ name: "user" }).save();
+      console.log("added 'user' to roles collection");
 
       // new Role({
       //   name: "moderator"
@@ -88,15 +83,10 @@ function initial() {
       //   console.log("added 'moderator' to roles collection");
       // });
 
-      new Role({
-        name: "admin"
-      }).save(err => {
-        if (err) {
-          console.log("error", err);
-        }
-
-        console.log("added 'admin' to roles collection");
-      });
+      await new Role({ name: "admin" }).save();
+      console.log("added 'admin' to roles collection");
     }
-  });
+  } catch (err) {
+    console.error("Error initializing the database roles", err);
+  }
 }
