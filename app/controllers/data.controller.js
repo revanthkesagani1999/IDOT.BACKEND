@@ -139,10 +139,27 @@ const calculateDefaultValues = (equipment, latestYear, ModelYear) => {
         )
         : 0
   );
+  equipment.Usage_rate = Number(Number((equipment.Monthly_use_hours / 176)).toFixed(3));
 
   const fuelType = equipment['Reimbursable Fuel_type (1 diesel, 2 gas, 3 other)'] || 0;
   const fuelMultiplier = (Math.abs(fuelType - 1) < 0.0001) ? 0.04 : (Math.abs(fuelType - 2) < 0.0001) ? 0.06 : 0;
-
+  //taking the latest fuel unit price 
+  const fuelCostsDoc =  mongoose.connection.db.collection('fuelcosts').findOne({});
+    // Determine the fuel type and set the unit price accordingly
+  switch(equipment['Reimbursable Fuel_type (1 diesel, 2 gas, 3 other)']) {
+      case 1: // Diesel
+        equipment.Fuel_unit_price = fuelCostsDoc.diesel_price;
+        break;
+      case 2: // Gasoline
+        equipment.Fuel_unit_price = fuelCostsDoc.gasoline_price;
+        break;
+      case 3: // Other
+        equipment.Fuel_unit_price = fuelCostsDoc.other;
+        break;
+      default:
+        // Set a default or throw an error if needed
+        break;
+    }
   equipment.Tire_Costs_Operating_cost_Hourly = (equipment.Cost_of_A_New_Set_of_Tires && equipment.Tire_Life_Hours) ? equipment.Cost_of_A_New_Set_of_Tires / equipment.Tire_Life_Hours : 0;
 
   equipment.Lube_Operating_cost_Hourly = equipment.Lube_Operating_cost_Hourly || 0;
@@ -324,6 +341,30 @@ const updateHourlyWageAndCalculateCosts = async (year, hourlyWage) => {
   );
 
   await Promise.all(updatePromises);
+};
+
+exports.addNewEquipment = async (req, res) => {
+  try {
+    const { equipment, modelYear } = req.body;
+    
+    // Retrieve the current year (latestYear) from the 'currentyear' collection
+    const currentYearDoc = await mongoose.connection.db.collection('currentyear').findOne({});
+    const latestYear = currentYearDoc.currentyear; // Assuming 'currentyear' field holds the latest year
+
+    // Calculate default values for the new equipment
+    const calculatedEquipment = calculateDefaultValues(equipment, latestYear, modelYear);
+
+    // Access the collection for the specified modelYear
+    const modelYearCollection = mongoose.connection.db.collection(modelYear.toString());
+
+    // Insert the new equipment into the modelYear collection
+    await modelYearCollection.insertOne(calculatedEquipment);
+
+    res.status(201).send({ message: "Equipment added successfully", data: calculatedEquipment });
+  } catch (error) {
+    console.error("Error adding new equipment:", error);
+    res.status(500).send({ message: "Error adding new equipment" });
+  }
 };
 
 

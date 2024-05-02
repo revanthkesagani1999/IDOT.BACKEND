@@ -42,4 +42,5 @@ module.exports = function(app) {
   app.get('/api/test/hrlabourwage', [authJwt.verifyToken, authJwt.isAdmin], dataController.getLabourWage);
   app.put('/api/test/edithrlabourwage', [authJwt.verifyToken, authJwt.isAdmin], dataController.updateHourlyWage);
   app.get('/api/test/currentyear', [authJwt.verifyToken], dataController.getCurrentYear);
+  app.post('/api/test/addequipment', [authJwt.verifyToken, authJwt.isAdmin], dataController.addNewEquipment);
 };
