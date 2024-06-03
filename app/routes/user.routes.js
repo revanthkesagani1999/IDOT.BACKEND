@@ -18,7 +18,9 @@ module.exports = function(app) {
 
   app.get("/api/test/savedmodels", [authJwt.verifyToken], controller.getAllModels);
   app.get('/api/test/years',[authJwt.verifyToken], dataController.getAllYears);
+  app.get('/api/test/contractors',[authJwt.verifyToken], dataController.getAllContractors);
   app.get('/api/test/model-data/:year',[authJwt.verifyToken], dataController.getModelDataByYear);
+  app.get('/api/test/contractor-data/:contractor',[authJwt.verifyToken], dataController.getModelDataByContractor);
   app.get("/api/test/all", controller.allAccess);
 
   app.get("/api/test/user", [authJwt.verifyToken,authJwt.isGeneralUser], controller.userBoard);

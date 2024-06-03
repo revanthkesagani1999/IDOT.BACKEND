@@ -16,6 +16,30 @@ exports.getAllYears = async (req, res) => {
   res.status(200).send({ years: years });
 };
 
+exports.getAllContractors = async (req, res) => {
+  try {
+    // Get all collections from the database
+    const collections = await mongoose.connection.db.listCollections().toArray();
+  
+    // Filter collections that start with "contractor-"
+    const contractorCollections = collections.filter((collection) => {
+      return collection.name.startsWith("contractor-");
+    });
+
+    // Extract contractor names from the collection names
+    const contractors = contractorCollections.map((collection) => {
+      // Assuming the name structure is "contractor-ContractorName"
+      return collection.name.split('contractor-')[1];
+    });
+
+    // Send the contractor names as a response
+    res.status(200).send({ contractors: contractors });
+  } catch (error) {
+    console.error("Error retrieving contractors:", error);
+    res.status(500).send({ message: "Error retrieving contractor data" });
+  }
+};
+
 exports.getModelDataByYear = async (req, res) => {
   const year = req.params.year;
 
@@ -25,6 +49,19 @@ exports.getModelDataByYear = async (req, res) => {
   } catch (err) {
     console.error(`Error fetching model data for year ${year}:`, err);
     res.status(500).send({ message: `Error fetching model data for year ${year}` });
+  }
+};
+
+exports.getModelDataByContractor = async (req, res) => {
+  const contractor = req.params.contractor;
+  const collectionName = `contractor-${contractor}`;
+  console.log(collectionName);
+  try {
+    const data = await mongoose.connection.db.collection(collectionName).find({}).toArray();
+    res.status(200).send({ contractor: contractor, data: data });
+  } catch (err) {
+    console.error(`Error fetching model data for contractor ${contractor}:`, err);
+    res.status(500).send({ message: `Error fetching model data for contractor ${contractor}` });
   }
 };
 
