@@ -8,7 +8,7 @@ app.use(express.static(path));
 
 // Detailed CORS and preflight handling
 var corsOptions = {
-  origin: "https://idot-ui-revanth1999s-projects.vercel.app",
+  origin: "https://idot-ui.vercel.app",
   methods: ["POST", "GET", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
