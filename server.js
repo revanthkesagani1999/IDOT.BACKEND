@@ -12,6 +12,7 @@ app.use(express.static(path));
 
 var corsOptions = {
   origin: ["https://idot-ui-revanth1999s-projects.vercel.app"],
+  methods:["POST","GET","PUT","DELETE"],
   credentials: true, //access-control-allow-credentials:true
   optionSuccessStatus:200
 }
