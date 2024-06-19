@@ -15,11 +15,11 @@ app.use((req, res, next) => {
 app.use(express.static(path));
 
 var corsOptions = {
-  origin: "https://idot-ui-revanth1999s-projects.vercel.app",  // Ensure this matches your front-end URL exactly
+  origin: "https://idot-ui-revanth1999s-projects.vercel.app",
   methods: ["POST", "GET", "PUT", "DELETE"],
-  credentials: true, // Access-Control-Allow-Credentials: true
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'], // Ensure headers needed by your requests are allowed
-  optionSuccessStatus: 200
+  allowedHeaders: ["Content-Type", "Authorization"],  // Ensure to include any custom headers you use
+  credentials: true,
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
