@@ -11,14 +11,14 @@ const app = express();
 app.use(express.static(path));
 
 var corsOptions = {
-  origin: ["https://idot-ui-revanth1999s-projects.vercel.app/"],
-  methods:["POST","GET","PUT","DELETE"],
-  credentials: true, //access-control-allow-credentials:true
-  optionSuccessStatus:200
-}
+  origin: "https://idot-ui-revanth1999s-projects.vercel.app",  // Ensure this matches your front-end URL exactly
+  methods: ["POST", "GET", "PUT", "DELETE"],
+  credentials: true, // Access-Control-Allow-Credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'] // Ensure headers needed by your requests are allowed
+};
 
 app.use(cors(corsOptions));
-app.options( '*' , cors())
+app.options('*', cors(corsOptions));
 // parse requests of content-type - application/json
 app.use(express.json());
 
