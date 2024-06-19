@@ -2,12 +2,12 @@ const express = require("express");
 const cors = require("cors");
 const cookieSession = require("cookie-session");
 const app = express();
-
+app.use("/",(req, res) => {
+  res.send("server is running ");
+});
 const path = __dirname + '/app/views/';
 app.use(express.static(path));
-app.use("/",(req, res) => {
-  res.send("server is rinning ");
-});
+
 // Detailed CORS and preflight handling
 var corsOptions = {
   origin: "https://idot-ui.vercel.app",
