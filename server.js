@@ -7,6 +7,10 @@ const dbConfig = require("./app/config/db.config");
 
 const path = __dirname + '/app/views/';
 const app = express();
+app.use((req, res, next) => {
+  console.log(`Incoming ${req.method} request for ${req.url}`);
+  next();
+});
 
 app.use(express.static(path));
 
@@ -14,7 +18,8 @@ var corsOptions = {
   origin: "https://idot-ui-revanth1999s-projects.vercel.app",  // Ensure this matches your front-end URL exactly
   methods: ["POST", "GET", "PUT", "DELETE"],
   credentials: true, // Access-Control-Allow-Credentials: true
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'] // Ensure headers needed by your requests are allowed
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'], // Ensure headers needed by your requests are allowed
+  optionSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
