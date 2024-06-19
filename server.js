@@ -1,41 +1,39 @@
 const express = require("express");
 const cors = require("cors");
 const cookieSession = require("cookie-session");
-
-const dbConfig = require("./app/config/db.config");
-
+const app = express();
 
 const path = __dirname + '/app/views/';
-const app = express();
-app.use((req, res, next) => {
-  console.log(`Incoming ${req.method} request for ${req.url}`);
-  next();
-});
-
 app.use(express.static(path));
 
+// Detailed CORS and preflight handling
 var corsOptions = {
   origin: "https://idot-ui-revanth1999s-projects.vercel.app",
   methods: ["POST", "GET", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],  // Ensure to include any custom headers you use
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
   optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
-app.options("*", (req, res) => { 
-    res.set({
-        "Access-Control-Allow-Origin": "https://idot-ui-revanth1999s-projects.vercel.app",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Credentials": "true"
-    });
-    res.status(200).end();
+app.options("*", (req, res) => {
+  res.set({
+    "Access-Control-Allow-Origin": "https://idot-ui-revanth1999s-projects.vercel.app",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Credentials": "true"
+  });
+  console.log("Handling OPTIONS request for CORS");
+  res.status(200).end();
 });
-// parse requests of content-type - application/json
-app.use(express.json());
 
-// parse requests of content-type - application/x-www-form-urlencoded
+// Middleware to log requests
+app.use((req, res, next) => {
+  console.log(`Incoming ${req.method} request for ${req.url}`);
+  next();
+});
+
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
@@ -64,16 +62,15 @@ db.mongoose
     process.exit();
   });
 
-// simple route
 app.get("/", (req, res) => {
   res.sendFile(path + "index.html");
 });
 
-// routes
+// Route configurations
 require("./app/routes/auth.routes")(app);
 require("./app/routes/user.routes")(app);
 
-// set port, listen for requests
+// Set port, listen for requests
 const PORT = process.env.PORT || 8082;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}.`);
