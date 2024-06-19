@@ -23,7 +23,15 @@ var corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options("*", (req, res) => { 
+    res.set({
+        "Access-Control-Allow-Origin": "https://idot-ui-revanth1999s-projects.vercel.app",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true"
+    });
+    res.status(200).end();
+});
 // parse requests of content-type - application/json
 app.use(express.json());
 
