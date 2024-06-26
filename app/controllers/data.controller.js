@@ -55,49 +55,107 @@ exports.getModelDataByYear = async (req, res) => {
 exports.getModelDataByContractor = async (req, res) => {
   const contractor = req.params.contractor;
   const collectionName = `contractor-${contractor}`;
-  console.log(collectionName);
+
   try {
     const data = await mongoose.connection.db.collection(collectionName).find({}).toArray();
-    res.status(200).send({ contractor: contractor, data: data });
+    const transformedData = data.map(equipment => transformEquipmentData(equipment));
+    res.status(200).send({ contractor: contractor, data: transformedData });
   } catch (err) {
     console.error(`Error fetching model data for contractor ${contractor}:`, err);
     res.status(500).send({ message: `Error fetching model data for contractor ${contractor}` });
   }
 };
 
+const  transformEquipmentData = (equipment) => {
+  const fieldsToNumber = [
+    'Reimbursable', 'Fuel_type', 'Fuel_unit_price', 'Original_price', 
+    'Sales_Tax', 'Discount', 'Salvage_Value', 'Current_Market_Year_Resale_Value',
+    'Annual_Overhaul_Labor_Hours', 'Annual_Field_Labor_Hours', 
+    'Cost_of_A_New_Set_of_Tires', 'Tire_Life_Hours', 'Hourly_Lube_Costs',
+    'Hourly_Wage', 'Adjustment_for_fuel_cost', 'Horse_power',
+    'Economic_Life_in_months', 'Monthly_use_hours', 'Usage_rate',
+    'Initial_Freight_cost', 'Annual_Overhead_rate', 'Annual_Overhaul_Parts_cost_rate',
+    'Annual_Field_Repair_Parts_and_misc_supply_parts_Cost_rate', 
+    'Annual_Ground_Engaging_Component_rate', 'Cost_of_Capital_rate',
+    'Depreciation_Ownership_cost_Monthly', 'Cost_of_Facilities_Capital_Ownership_cost_Monthly',
+    'Overhead_Ownership_cost_Monthly', 'Overhaul_Labor_Ownership_cost_Monthly',
+    'Overhaul_Parts_Ownership_cost_Monthly', 'Total_ownership_cost_hourly',
+    'Field_Labor_Operating_cost_Hourly', 'Field_Parts_Operating_cost_Hourly',
+    'Ground_Engaging_Component_Cost_Operating_cost_Hourly', 'Lube_Operating_cost_Hourly',
+    'Fuel_by_horse_power_Operating_cost_Hourly', 'Tire_Costs_Operating_cost_Hourly',
+    'Total_operating_cost', 'Total_cost_recovery'
+  ];
+
+  fieldsToNumber.forEach(field => {
+    if (equipment[field] !== undefined && equipment[field] !== null) {
+      // Check if the value is 'NA' or other non-desired string
+      if (equipment[field] === 'NA') {
+        equipment[field] = 0;
+      } else {
+        // Remove commas and other formatting before converting to number
+        const cleanString = equipment[field].toString().replace(/,/g, '');
+        equipment[field] = Number(cleanString);
+        // Handle NaN explicitly if necessary, e.g., setting to 0
+        if (isNaN(equipment[field])) {
+          equipment[field] = 0;  // Default to 0 if the conversion does not produce a number
+        }
+      }
+    }
+  });
+
+  return equipment;
+};
+
 exports.editEquipment = async (req, res) => {
   try {
     const editedEquipment = req.body.equipment;
-
-    // Assuming the year is stored in the equipment data
     const year = req.body.year;
+    const contractor = req.body.contractor;
 
-    // Get the appropriate collection based on the year
-    const collectionName = year.toString(); // Convert year to a string
+    // Determine the collection name based on whether contractor data is specified
+    const collectionName = contractor ? `contractor-${contractor}` : year.toString();
     const collection = mongoose.connection.db.collection(collectionName);
     const currentYear = (await mongoose.connection.db.collection('currentyear').findOne({})).currentyear;
     const recalculatedEditedEquipment = calculateDefaultValues(editedEquipment, currentYear, year);
     const newEquipment = { ...recalculatedEditedEquipment };
     delete newEquipment._id;
     const updatedEquipment = await collection.findOneAndUpdate(
-      { _id: new ObjectId(editedEquipment._id) }, // Use an appropriate identifier for your equipment
-      { $set: newEquipment }, // Use $set to specify the fields to update
-      { new: true } // Return the updated document
+      { _id: new ObjectId(editedEquipment._id) },
+      { $set: newEquipment },
+      { returnDocument: 'after' }
     );
 
     if (!updatedEquipment) {
-      // If the equipment was not found, return a 404 status
       return res.status(404).json({ message: 'Equipment not found' });
     }
-
-    // Send a success response with the updated equipment
-    res.status(200).json(recalculatedEditedEquipment);
+    res.status(200).json(updatedEquipment.value); // Ensure to return the updated document
   } catch (error) {
     console.error('Error editing equipment:', error);
-    // Send an error response
     res.status(500).json({ message: 'Error editing equipment' });
   }
 };
+
+exports.addNewEquipment = async (req, res) => {
+  try {
+    const { equipment, modelYear, contractor } = req.body;
+    
+    // Determine the collection name based on whether contractor data is specified
+    const collectionName = contractor ? `contractor-${contractor}` : modelYear.toString();
+    const collection = mongoose.connection.db.collection(collectionName);
+
+    const currentYearDoc = await mongoose.connection.db.collection('currentyear').findOne({});
+    const latestYear = currentYearDoc.currentyear;
+
+    const calculatedEquipment = calculateDefaultValues(equipment, latestYear, modelYear);
+    await collection.insertOne(calculatedEquipment);
+
+    res.status(201).send({ message: "Equipment added successfully", data: calculatedEquipment });
+  } catch (error) {
+    console.error("Error adding new equipment:", error);
+    res.status(500).send({ message: "Error adding new equipment" });
+  }
+};
+
 
 exports.generateNextYearEquipData = async (req, res) => {
   try {
@@ -165,8 +223,10 @@ async function updateYearEquipmentData(year, currYear) {
   }
 };
 
+
 const calculateDefaultValues = (equipment, latestYear, ModelYear) => {
   if (!equipment) return; 
+  equipment = transformEquipmentData(equipment);
   const denominator = (equipment.Economic_Life_in_months / 12);
   equipment.Current_Market_Year_Resale_Value = Math.round(
     denominator ?
@@ -273,16 +333,68 @@ exports.getCurrentYear = async (req, res) => {
   }
 };
 
-const updateFuelCostsForYear = async (year, fuelCosts) => {
-  const equipmentCollection = mongoose.connection.db.collection(year);
+async function getAllRelevantCollections() {
+  const collections = await mongoose.connection.db.listCollections().toArray();
+  const yearCollections = [];
+  const contractorCollections = [];
 
+  collections.forEach(collection => {
+      if (!isNaN(parseInt(collection.name))) {
+          yearCollections.push(collection.name);
+      } else if (collection.name.startsWith("contractor-")) {
+          contractorCollections.push(collection.name);
+      }
+  });
+
+  return { yearCollections, contractorCollections };
+}
+
+// Old version when we have only equipments
+
+// const updateFuelCostsForYear = async (year, fuelCosts) => {
+//   const equipmentCollection = mongoose.connection.db.collection(year);
+
+//   const equipmentData = await equipmentCollection.find({}).toArray();
+
+//   const updatedEquipmentData = equipmentData.map((equipment) => {
+//     let fuelUnitPrice;
+//     const fuelType = parseInt(equipment['Reimbursable Fuel_type (1 diesel, 2 gas, 3 other)']);
+//     if ( fuelType === 1) {
+//       fuelUnitPrice = fuelCosts.diesel_price;
+//     } else if (fuelType === 2) {
+//       fuelUnitPrice = fuelCosts.gasoline_price;
+//     } else {
+//       fuelUnitPrice = fuelCosts.other;
+//     }
+
+//     equipment.Fuel_unit_price = fuelUnitPrice;
+//     equipment.Fuel_by_horse_power_Operating_cost_Hourly =
+//       (fuelType === 1 ? 0.04 :
+//         fuelType === 2 ? 0.06 : 0) *
+//       equipment.Horse_power * fuelUnitPrice;
+//     equipment.Total_operating_cost = equipment.Field_Labor_Operating_cost_Hourly + equipment.Field_Parts_Operating_cost_Hourly + equipment.Ground_Engaging_Component_Cost_Operating_cost_Hourly + equipment.Lube_Operating_cost_Hourly + equipment.Fuel_by_horse_power_Operating_cost_Hourly + equipment.Tire_Costs_Operating_cost_Hourly;
+//     equipment.Total_cost_recovery = equipment.Total_ownership_cost_hourly + equipment.Total_operating_cost;
+//     return equipment;
+//   });
+
+//   const updatePromises = updatedEquipmentData.map((equipment) =>
+//     equipmentCollection.updateOne({ _id: equipment._id }, { $set: equipment })
+//   );
+
+//   await Promise.all(updatePromises);
+// };
+
+const updateFuelCostsForCollection = async (collectionName, fuelCosts) => {
+  const equipmentCollection = mongoose.connection.db.collection(collectionName);
   const equipmentData = await equipmentCollection.find({}).toArray();
-
+  // The same update logic as before
   const updatedEquipmentData = equipmentData.map((equipment) => {
+    equipment = transformEquipmentData(equipment);
     let fuelUnitPrice;
-    if (equipment['Reimbursable Fuel_type (1 diesel, 2 gas, 3 other)'] === 1) {
+    const fuelType = parseInt(equipment['Reimbursable Fuel_type (1 diesel, 2 gas, 3 other)']);
+    if ( fuelType === 1) {
       fuelUnitPrice = fuelCosts.diesel_price;
-    } else if (equipment['Reimbursable Fuel_type (1 diesel, 2 gas, 3 other)'] === 2) {
+    } else if (fuelType === 2) {
       fuelUnitPrice = fuelCosts.gasoline_price;
     } else {
       fuelUnitPrice = fuelCosts.other;
@@ -290,8 +402,8 @@ const updateFuelCostsForYear = async (year, fuelCosts) => {
 
     equipment.Fuel_unit_price = fuelUnitPrice;
     equipment.Fuel_by_horse_power_Operating_cost_Hourly =
-      (equipment['Reimbursable Fuel_type (1 diesel, 2 gas, 3 other)'] === 1 ? 0.04 :
-       equipment['Reimbursable Fuel_type (1 diesel, 2 gas, 3 other)'] === 2 ? 0.06 : 0) *
+      (fuelType === 1 ? 0.04 :
+        fuelType === 2 ? 0.06 : 0) *
       equipment.Horse_power * fuelUnitPrice;
     equipment.Total_operating_cost = equipment.Field_Labor_Operating_cost_Hourly + equipment.Field_Parts_Operating_cost_Hourly + equipment.Ground_Engaging_Component_Cost_Operating_cost_Hourly + equipment.Lube_Operating_cost_Hourly + equipment.Fuel_by_horse_power_Operating_cost_Hourly + equipment.Tire_Costs_Operating_cost_Hourly;
     equipment.Total_cost_recovery = equipment.Total_ownership_cost_hourly + equipment.Total_operating_cost;
@@ -305,20 +417,45 @@ const updateFuelCostsForYear = async (year, fuelCosts) => {
   await Promise.all(updatePromises);
 };
 
+// Old version when we have only equipments
+// exports.editFuelCosts = async (req, res) => {
+//   try {
+//     const fuelCosts = req.body;
+
+//     const fuelCostsCollection = mongoose.connection.db.collection('fuelcosts');
+//     await fuelCostsCollection.updateOne({}, { $set: fuelCosts }, { upsert: true });
+
+//     const equipmentCollections = await mongoose.connection.db.listCollections().toArray();
+//     const yearCollections = equipmentCollections
+//       .filter((collection) => !isNaN(parseInt(collection.name)))
+//       .map((collection) => collection.name)
+//       .sort();
+
+//     const updatePromises = yearCollections.map((year) => updateFuelCostsForYear(year, fuelCosts));
+
+//     await Promise.all(updatePromises);
+
+//     res.status(200).json({ message: 'Fuel costs updated for all equipment' });
+//   } catch (error) {
+//     console.error('Error updating fuel costs:', error);
+//     res.status(500).json({ message: 'Error updating fuel costs' });
+//   }
+// };
+
 exports.editFuelCosts = async (req, res) => {
   try {
     const fuelCosts = req.body;
 
+    // Update the global fuel costs settings
     const fuelCostsCollection = mongoose.connection.db.collection('fuelcosts');
     await fuelCostsCollection.updateOne({}, { $set: fuelCosts }, { upsert: true });
 
-    const equipmentCollections = await mongoose.connection.db.listCollections().toArray();
-    const yearCollections = equipmentCollections
-      .filter((collection) => !isNaN(parseInt(collection.name)))
-      .map((collection) => collection.name)
-      .sort();
+    const { yearCollections, contractorCollections } = await getAllRelevantCollections();
 
-    const updatePromises = yearCollections.map((year) => updateFuelCostsForYear(year, fuelCosts));
+    // Update fuel costs for both year and contractor collections
+    const updatePromises = [...yearCollections, ...contractorCollections].map((collectionName) =>
+      updateFuelCostsForCollection(collectionName, fuelCosts)
+    );
 
     await Promise.all(updatePromises);
 
@@ -329,40 +466,34 @@ exports.editFuelCosts = async (req, res) => {
   }
 };
 
-
 exports.updateHourlyWage = async (req, res) => {
   try {
-    console.log(req.body);
-    const hourlyWage = req.body.hourly_wage;  // Assuming hourly wage is sent in the request body
+    const hourlyWage = req.body.hourly_wage;
 
-    // Update the hourly wage in the 'wagecosts' collection
     const hourlyWageCollection = mongoose.connection.db.collection('wagecosts');
     await hourlyWageCollection.updateOne({}, { $set: { hourly_wage: hourlyWage } }, { upsert: true });
 
-    // Update hourly wage and calculate costs for all equipment data
-    const equipmentCollections = await mongoose.connection.db.listCollections().toArray();
-    const yearCollections = equipmentCollections
-      .filter((collection) => !isNaN(parseInt(collection.name)))
-      .map((collection) => collection.name)
-      .sort();
+    const { yearCollections, contractorCollections } = await getAllRelevantCollections();
 
-    const updatePromises = yearCollections.map((year) => updateHourlyWageAndCalculateCosts(year, hourlyWage));
+    const updatePromises = [...yearCollections, ...contractorCollections].map((collectionName) =>
+      updateHourlyWageForCollection(collectionName, hourlyWage)
+    );
 
     await Promise.all(updatePromises);
 
-    res.status(200).json({ message: 'Hourly wage and related costs updated for all equipment' });
+    res.status(200).json({ message: 'Hourly wage updated for all equipment' });
   } catch (error) {
-    console.error('Error updating hourly wage and related costs:', error);
-    res.status(500).json({ message: 'Error updating hourly wage and related costs' });
+    console.error('Error updating hourly wage:', error);
+    res.status(500).json({ message: 'Error updating hourly wage' });
   }
 };
 
-const updateHourlyWageAndCalculateCosts = async (year, hourlyWage) => {
-  const equipmentCollection = mongoose.connection.db.collection(year);
-
+const updateHourlyWageForCollection = async (collectionName, hourlyWage) => {
+  const equipmentCollection = mongoose.connection.db.collection(collectionName);
   const equipmentData = await equipmentCollection.find({}).toArray();
-
+  // The same update logic as before
   const updatedEquipmentData = equipmentData.map((equipment) => {
+    equipment = transformEquipmentData(equipment);
     equipment.Hourly_Wage = hourlyWage;
     // Recalculate the costs based on the updated hourly wage
     equipment.Overhaul_Labor_Ownership_cost_Monthly = (equipment.Hourly_Wage * equipment.Annual_Overhaul_Labor_Hours) / 12 / equipment.Usage_rate;
@@ -380,28 +511,59 @@ const updateHourlyWageAndCalculateCosts = async (year, hourlyWage) => {
   await Promise.all(updatePromises);
 };
 
-exports.addNewEquipment = async (req, res) => {
-  try {
-    const { equipment, modelYear } = req.body;
-    
-    // Retrieve the current year (latestYear) from the 'currentyear' collection
-    const currentYearDoc = await mongoose.connection.db.collection('currentyear').findOne({});
-    const latestYear = currentYearDoc.currentyear; // Assuming 'currentyear' field holds the latest year
 
-    // Calculate default values for the new equipment
-    const calculatedEquipment = calculateDefaultValues(equipment, latestYear, modelYear);
+// Old version when we have only equipments
 
-    // Access the collection for the specified modelYear
-    const modelYearCollection = mongoose.connection.db.collection(modelYear.toString());
+// exports.updateHourlyWage = async (req, res) => {
+//   try {
+//     console.log(req.body);
+//     const hourlyWage = req.body.hourly_wage;  // Assuming hourly wage is sent in the request body
 
-    // Insert the new equipment into the modelYear collection
-    await modelYearCollection.insertOne(calculatedEquipment);
+//     // Update the hourly wage in the 'wagecosts' collection
+//     const hourlyWageCollection = mongoose.connection.db.collection('wagecosts');
+//     await hourlyWageCollection.updateOne({}, { $set: { hourly_wage: hourlyWage } }, { upsert: true });
 
-    res.status(201).send({ message: "Equipment added successfully", data: calculatedEquipment });
-  } catch (error) {
-    console.error("Error adding new equipment:", error);
-    res.status(500).send({ message: "Error adding new equipment" });
-  }
-};
+//     // Update hourly wage and calculate costs for all equipment data
+//     const equipmentCollections = await mongoose.connection.db.listCollections().toArray();
+//     const yearCollections = equipmentCollections
+//       .filter((collection) => !isNaN(parseInt(collection.name)))
+//       .map((collection) => collection.name)
+//       .sort();
+
+//     const updatePromises = yearCollections.map((year) => updateHourlyWageAndCalculateCosts(year, hourlyWage));
+
+//     await Promise.all(updatePromises);
+
+//     res.status(200).json({ message: 'Hourly wage and related costs updated for all equipment' });
+//   } catch (error) {
+//     console.error('Error updating hourly wage and related costs:', error);
+//     res.status(500).json({ message: 'Error updating hourly wage and related costs' });
+//   }
+// };
+
+// const updateHourlyWageAndCalculateCosts = async (year, hourlyWage) => {
+//   const equipmentCollection = mongoose.connection.db.collection(year);
+
+//   const equipmentData = await equipmentCollection.find({}).toArray();
+
+//   const updatedEquipmentData = equipmentData.map((equipment) => {
+//     equipment.Hourly_Wage = hourlyWage;
+//     // Recalculate the costs based on the updated hourly wage
+//     equipment.Overhaul_Labor_Ownership_cost_Monthly = (equipment.Hourly_Wage * equipment.Annual_Overhaul_Labor_Hours) / 12 / equipment.Usage_rate;
+//     equipment.Total_ownership_cost_hourly = (equipment.Depreciation_Ownership_cost_Monthly + equipment.Cost_of_Facilities_Capital_Ownership_cost_Monthly + equipment.Overhead_Ownership_cost_Monthly + equipment.Overhaul_Labor_Ownership_cost_Monthly + equipment.Overhaul_Parts_Ownership_cost_Monthly) / 176;
+//     equipment.Field_Labor_Operating_cost_Hourly = (equipment.Annual_Field_Labor_Hours * equipment.Hourly_Wage) / 12 / equipment.Monthly_use_hours;
+//     equipment.Total_operating_cost = equipment.Field_Labor_Operating_cost_Hourly + equipment.Field_Parts_Operating_cost_Hourly + equipment.Ground_Engaging_Component_Cost_Operating_cost_Hourly + equipment.Lube_Operating_cost_Hourly + equipment.Fuel_by_horse_power_Operating_cost_Hourly + equipment.Tire_Costs_Operating_cost_Hourly;
+//     equipment.Total_cost_recovery = equipment.Total_ownership_cost_hourly + equipment.Total_operating_cost;
+//     return equipment;
+//   });
+
+//   const updatePromises = updatedEquipmentData.map((equipment) =>
+//     equipmentCollection.updateOne({ _id: equipment._id }, { $set: equipment })
+//   );
+
+//   await Promise.all(updatePromises);
+// };
+
+
 
 
