@@ -1,41 +1,27 @@
 const express = require("express");
 const cors = require("cors");
 const cookieSession = require("cookie-session");
-const app = express();
-app.use("/",(req, res) => {
-  res.send("server is running ");
-});
+
+const dbConfig = require("./app/config/db.config");
+
+
 const path = __dirname + '/app/views/';
+const app = express();
+
 app.use(express.static(path));
 
-// Detailed CORS and preflight handling
 var corsOptions = {
-  origin: "https://idot-ui.vercel.app",
-  methods: ["POST", "GET", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-  optionsSuccessStatus: 200
-};
+  origin: ["http://localhost:4200"],
+  credentials: true, //access-control-allow-credentials:true
+    optionSuccessStatus:200
+}
 
 app.use(cors(corsOptions));
-app.options("*", (req, res) => {
-  res.set({
-    "Access-Control-Allow-Origin": "https://idot-ui-revanth1999s-projects.vercel.app",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Credentials": "true"
-  });
-  console.log("Handling OPTIONS request for CORS");
-  res.status(200).end();
-});
-
-// Middleware to log requests
-app.use((req, res, next) => {
-  console.log(`Incoming ${req.method} request for ${req.url}`);
-  next();
-});
-
+app.options( '*' , cors())
+// parse requests of content-type - application/json
 app.use(express.json());
+
+// parse requests of content-type - application/x-www-form-urlencoded
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
@@ -64,15 +50,16 @@ db.mongoose
     process.exit();
   });
 
+// simple route
 app.get("/", (req, res) => {
   res.sendFile(path + "index.html");
 });
 
-// Route configurations
+// routes
 require("./app/routes/auth.routes")(app);
 require("./app/routes/user.routes")(app);
 
-// Set port, listen for requests
+// set port, listen for requests
 const PORT = process.env.PORT || 8082;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}.`);
