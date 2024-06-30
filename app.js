@@ -12,9 +12,10 @@ const app = express();
 app.use(express.static(path));
 
 var corsOptions = {
-  origin: ["http://localhost:4200/","https://idot-ui.vercel.app"],
-  credentials: true, //access-control-allow-credentials:true
-    optionSuccessStatus:200
+  origin: ["http://localhost:4200", "https://idot-ui.vercel.app"],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }
 
 app.use(cors(corsOptions));
