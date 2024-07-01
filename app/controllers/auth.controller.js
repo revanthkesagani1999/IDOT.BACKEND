@@ -112,10 +112,10 @@ exports.forgotPassword = async (req, res) => {
       html: `
         <p>Please click on the following link, or paste this into your browser to complete the process:</p>
         <p>Note: The link is only valid for 1 hour.</p>
-        <a href="http://localhost:4200/#/reset-password/${token}">Reset Password</a>
+        <a href="https://idot-ui.vercel.app/#/reset-password/${token}">Reset Password</a>
       `
     };
-    console.log(`http://localhost:4200/#/reset-password/${token}`);
+    console.log(`https://idot-ui.vercel.app/#/reset-password/${token}`);
     await transporter.sendMail(mailOptions);
     res.status(200).send({ message: 'A reset link has been sent to ' + user.email + '.' });
   } catch (err) {
