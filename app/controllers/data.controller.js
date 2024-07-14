@@ -98,6 +98,8 @@ const  transformEquipmentData = (equipment) => {
         // Handle NaN explicitly if necessary, e.g., setting to 0
         if (isNaN(equipment[field])) {
           equipment[field] = 0;  // Default to 0 if the conversion does not produce a number
+        } else {
+          equipment[field] = Number(numValue.toFixed(2)); // Round to two decimal places and convert back to number
         }
       }
     }
