@@ -94,16 +94,16 @@ const  transformEquipmentData = (equipment) => {
       } else {
         // Remove commas and other formatting before converting to number
         const cleanString = equipment[field].toString().replace(/,/g, '');
-        equipment[field] = Number(cleanString);
+        let numValue = Number(cleanString);
         // Handle NaN explicitly if necessary, e.g., setting to 0
-        if (isNaN(equipment[field])) {
+        if (isNaN(numValue)) {
           equipment[field] = 0;  // Default to 0 if the conversion does not produce a number
         } else {
           equipment[field] = Number(numValue.toFixed(2)); // Round to two decimal places and convert back to number
         }
       }
     }
-  });
+});
 
   return equipment;
 };
