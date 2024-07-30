@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const ObjectId = require('mongodb').ObjectId;
 const Modeldata = require('../models').data;
+const ExcelJS = require('exceljs');
 
 exports.getAllYears = async (req, res) => {
   const collections = await mongoose.connection.db.listCollections().toArray();
@@ -565,6 +566,51 @@ const updateHourlyWageForCollection = async (collectionName, hourlyWage) => {
 
 //   await Promise.all(updatePromises);
 // };
+
+exports.exportEquipmentData = async (req, res) => {
+  try {
+    const selections = req.body.selections; // An array of years
+    const dataType = req.body.dataType;
+    const workbook = new ExcelJS.Workbook(); // Create a new workbook
+
+    for (const selection of selections) {
+      const collectionName = dataType === 'contractors' ? `contractor-${selection}` : selection.toString();
+      const data = await mongoose.connection.db.collection(collectionName).find({}).toArray(); // Fetch data for each selection
+        if (data.length === 0) {
+            continue; // If no data, skip this year
+        }
+        const worksheet = workbook.addWorksheet(selection.toString()); // Create a new worksheet for each year
+        
+        const columns = Object.keys(data[0])
+          .filter(key => key !== '_id')
+          .map(key => ({
+            header: key,
+            key: key,
+            width: key.length + 10 // Set width based on key length for better visibility
+          }));
+        // Automatically set columns based on keys of the first object in the data array
+
+        worksheet.columns = columns;
+
+        const filteredData = data.map(item => {
+          const { _id, ...rest } = item;
+          return rest;
+        });
+        worksheet.addRows(filteredData);
+    }
+
+    // Set response headers to prompt download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="EquipmentData.xlsx"');
+
+    // Write workbook to the HTTP response
+    await workbook.xlsx.write(res);
+
+    res.status(200).end(); // End the response process
+} catch (error) {
+    res.status(500).send({ message: "Error exporting data", error: error.message });
+}
+};
 
 
 
