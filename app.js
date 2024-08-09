@@ -2,7 +2,10 @@
 const express = require("express");
 const cors = require("cors");
 const cookieSession = require("cookie-session");
+require('dotenv').config();
 
+const mongoUri = process.env.MONGODB_URI;
+const cookieSecret = process.env.COOKIE_SECRET;
 const dbConfig = require("./app/config/db.config");
 
 
@@ -28,7 +31,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   cookieSession({
     name: "bezkoder-session",
-    secret: "COOKIE_SECRET", // Use environment variables instead of hardcoding
+    secret: cookieSecret, // Use environment variables instead of hardcoding
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production', // Ensure secure is enabled in production
     maxAge: 24 * 60 * 60 * 1000 // Set a max age for the cookie (example: 24 hours)
@@ -40,7 +43,7 @@ const modeldataconnection = require("./app/models").data;
 const Role = db.role;
 
 db.mongoose
-  .connect("mongodb+srv://rkesagani:Revanth1999@idotcluster.ejuamcb.mongodb.net/?retryWrites=true&w=majority")
+  .connect(mongoUri)
   .then(() => {
     console.log("Successfully connect to MongoDB.");
     initial();
