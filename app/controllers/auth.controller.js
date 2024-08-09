@@ -76,17 +76,22 @@ exports.signin = async (req, res) => {
 
 exports.signout = async (req, res) => {
   try {
-    // Clear the session data
-    req.session = null;
-    
-    // If you are setting a cookie name in your session middleware, clear it like this:
-    res.clearCookie('bezkoder-session');  // Use the name of your session cookie here
-    
-    res.status(200).send({ message: "You've been signed out!" });
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          return res.status(500).send({ message: "Failed to destroy the session" });
+        }
+        res.clearCookie('session-id'); // The name of your session cookie
+        res.status(200).send({ message: "You've been signed out!" });
+      });
+    } else {
+      res.status(200).send({ message: "No session to destroy" });
+    }
   } catch (err) {
     res.status(500).send({ message: err.message });
   }
 };
+
 
 
 // Forgot password function
