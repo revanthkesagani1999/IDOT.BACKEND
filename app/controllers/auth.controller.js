@@ -81,7 +81,7 @@ exports.signout = async (req, res) => {
         if (err) {
           return res.status(500).send({ message: "Failed to destroy the session" });
         }
-        res.clearCookie('session-id'); // The name of your session cookie
+        res.clearCookie('bezkoder-session'); // The name of your session cookie
         res.status(200).send({ message: "You've been signed out!" });
       });
     } else {
