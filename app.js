@@ -17,7 +17,6 @@ var corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }
-
 app.use(cors(corsOptions));
 app.options( '*' , cors())
 // parse requests of content-type - application/json
@@ -29,8 +28,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   cookieSession({
     name: "bezkoder-session",
-    secret: "COOKIE_SECRET", // should use as secret environment variable
-    httpOnly: true
+    secret: "COOKIE_SECRET", // Use environment variables instead of hardcoding
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', // Ensure secure is enabled in production
+    maxAge: 24 * 60 * 60 * 1000 // Set a max age for the cookie (example: 24 hours)
   })
 );
 
@@ -39,10 +40,7 @@ const modeldataconnection = require("./app/models").data;
 const Role = db.role;
 
 db.mongoose
-  .connect("mongodb+srv://rkesagani:Revanth1999@idotcluster.ejuamcb.mongodb.net/?retryWrites=true&w=majority", {
-    // // useNewUrlParser: true,
-    // useUnifiedTopology: true
-  })
+  .connect("mongodb+srv://rkesagani:Revanth1999@idotcluster.ejuamcb.mongodb.net/?retryWrites=true&w=majority")
   .then(() => {
     console.log("Successfully connect to MongoDB.");
     initial();
@@ -65,6 +63,10 @@ require("./app/routes/user.routes")(app);
 const PORT = process.env.PORT || 8082;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}.`);
+});
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
 });
 
 async function initial() {
