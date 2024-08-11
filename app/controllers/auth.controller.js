@@ -52,7 +52,7 @@ exports.signin = async (req, res) => {
     }
 
     var token = jwt.sign({ id: user.id }, config.secret, {
-      expiresIn: 7200, // 24 hours
+      expiresIn: 86400, // 24 hours
     });
 
     var authorities = [];
@@ -74,17 +74,25 @@ exports.signin = async (req, res) => {
   }
 };
 
+// exports.signout = async (req, res) => {
+//   try {
+//     req.session = null;
+//     res.status(200).send({ message: "You've been signed out!" });
+//   } catch (err) {
+//     res.status(500).send({ message: err.message });
+//   }
+// };
+
 exports.signout = async (req, res) => {
   try {
-    // Clear the session data
     req.session = null;
-    
+
     // If you are setting a cookie name in your session middleware, clear it like this:
     res.clearCookie('bezkoder-session');  // Use the name of your session cookie here
-    //console.log('signout');
+
     res.status(200).send({ message: "You've been signed out!" });
   } catch (err) {
-    console.log(err);
+    console.error("Error during logout:", err);
     res.status(500).send({ message: err.message });
   }
 };
